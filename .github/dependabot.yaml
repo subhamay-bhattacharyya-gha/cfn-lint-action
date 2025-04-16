@@ -10,13 +10,13 @@ updates:
     open-pull-requests-limit: 5
 
   # 2. JavaScript / Node.js (npm/yarn)
-  - package-ecosystem: "npm"
-    directory: "/"  # Location of package.json
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: "chore"
-      include: "scope"
+  # - package-ecosystem: "npm"
+  #   directory: "/"  # Location of package.json
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "04:00"
+  #   open-pull-requests-limit: 5
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"
