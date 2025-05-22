@@ -1,44 +1,60 @@
-name: 'Action Name'
-description: 'Action Description'
+name: "CloudFormation Linter"
+description: "Lint CloudFormation templates using cfn-lint"
 
 inputs:
-  input-1:
-    description: Input description.
+  template-dir:
+    description: 'Directory to scan for templates (default is .)'
     required: false
-    default: default-value
-  input-2:
-    description: Input description.
+    default: '.'
+
+  fail-on-warnings:
+    description: 'Fail the job on warnings (true/false)'
     required: false
-    default: default-value
-  input-3:
-    description: Input description.
-    required: false
-    default: default-value
-  github-token:
-    description: 'GitHub token'
-    required: true
+    default: 'false'
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.x
+        python-version: '3.x'
 
-    - name: Sample step to call GitHub API
+    - name: Install cfn-lint
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        ISSUE_NUMBER="${{ github.event.issue.number }}"
-        REPO="${{ github.repository }}"
-        OWNER=$(echo $REPO | cut -d'/' -f1)
-        BRANCH_NAME="${{ steps.create-branch.outputs.branch-name }}"
-        COMMENT_BODY="Branch [$BRANCH_NAME](https://github.com/$OWNER/$REPO/tree/$BRANCH_NAME) created 🚀"
+        python -m pip install --upgrade pip
+        pip install cfn-lint
 
-        curl -s -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{\"body\": \"$COMMENT_BODY\"}" \
-          https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/comments
+    - name: Run cfn-lint and write to summary
+      shell: bash
+      run: |
+        echo "## CloudFormation Lint Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        TEMPLATE_DIR="${{ inputs.template-dir }}"
+        FAIL_ON_WARNINGS="${{ inputs.fail-on-warnings }}"
+        EXIT_CODE=0
+
+        FILES=$(find "$TEMPLATE_DIR" -type f \( -name "*.yaml" -o -name "*.yml" \))
+        for file in $FILES; do
+          echo "Linting $file..."
+          echo "### $file" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$FAIL_ON_WARNINGS" = "true" ]; then
+            LINT_OUTPUT=$(cfn-lint "$file" 2>&1) || EXIT_CODE=$?
+          else
+            LINT_OUTPUT=$(cfn-lint --ignore-checks W "$file" 2>&1) || EXIT_CODE=$?
+          fi
+
+          if [ -n "$LINT_OUTPUT" ]; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$LINT_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No issues found." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+        done
+
+        exit $EXIT_CODE
