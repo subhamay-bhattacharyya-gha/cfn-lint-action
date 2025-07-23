@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Invalid CloudFormation template with errors for testing'
+
+Resources:
+  # Invalid resource type - will cause error
+  InvalidResource:
+    Type: AWS::S3::InvalidResourceType
+    Properties:
+      BucketName: 'test-bucket'
+
+  # Invalid property for S3 bucket - will cause error
+  TestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: 'INVALID-BUCKET-NAME-WITH-UPPERCASE'  # Invalid bucket name format
+      InvalidProperty: 'this-property-does-not-exist'  # Invalid property
+      AccessControl: 'InvalidValue'  # Invalid property name and value
+
+  # Missing required properties - will cause error
+  TestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # Missing required AssumeRolePolicyDocument property
+      RoleName: 'test-role'
+
+  # Invalid reference - will cause error
+  TestFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'test-function'
+      Runtime: 'invalid-runtime'  # Invalid runtime
+      Handler: index.handler
+      Code:
+        ZipFile: 'invalid code'
+      Role: !Ref NonExistentRole  # Reference to non-existent resource
+
+# Invalid syntax - missing colon
+Outputs
+  InvalidOutput:
+    Description: 'This will cause a YAML parsing error'
+    Value: !Ref TestBucket

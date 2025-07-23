@@ -1,21 +1,9 @@
-name: 'Action Name'
-description: 'Action Description'
+name: 'CloudFormation Linter'
+description: 'Run cfn-lint on CloudFormation templates with comprehensive reporting'
 
 inputs:
-  input-1:
-    description: Input description.
-    required: false
-    default: default-value
-  input-2:
-    description: Input description.
-    required: false
-    default: default-value
-  input-3:
-    description: Input description.
-    required: false
-    default: default-value
-  github-token:
-    description: 'GitHub token'
+  template-path:
+    description: 'Relative path to CloudFormation template from repository root'
     required: true
 
 runs:
@@ -24,21 +12,124 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.x
+        python-version: '3.x'
 
-    - name: Sample step to call GitHub API
+    - name: Install cfn-lint
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        ISSUE_NUMBER="${{ github.event.issue.number }}"
-        REPO="${{ github.repository }}"
-        OWNER=$(echo $REPO | cut -d'/' -f1)
-        BRANCH_NAME="${{ steps.create-branch.outputs.branch-name }}"
-        COMMENT_BODY="Branch [$BRANCH_NAME](https://github.com/$OWNER/$REPO/tree/$BRANCH_NAME) created 🚀"
+        pip install cfn-lint
 
-        curl -s -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{\"body\": \"$COMMENT_BODY\"}" \
-          https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/comments
+    - name: Validate and lint CloudFormation template
+      shell: bash
+      run: |
+        # Process template path input
+        TEMPLATE_PATH="${{ inputs.template-path }}"
+        TEMPLATE_NAME=$(basename "$TEMPLATE_PATH")
+        FULL_TEMPLATE_PATH="${{ github.workspace }}/$TEMPLATE_PATH"
+        
+        echo "Processing CloudFormation template: $TEMPLATE_NAME"
+        echo "Full path: $FULL_TEMPLATE_PATH"
+        
+        # Validate file existence
+        if [ ! -f "$FULL_TEMPLATE_PATH" ]; then
+          echo "❌ Error: CloudFormation template not found at path: $FULL_TEMPLATE_PATH"
+          exit 1
+        fi
+        
+        echo "✅ Template file found, proceeding with linting..."
+        
+        # Run cfn-lint with error handling
+        set +e
+        LINT_OUTPUT=$(cfn-lint --format parseable "$FULL_TEMPLATE_PATH" 2>&1)
+        LINT_EXIT_CODE=$?
+        set -e
+        
+        # Generate GitHub Step Summary
+        echo "## CloudFormation Linting Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Template:** \`$TEMPLATE_NAME\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ $LINT_EXIT_CODE -eq 0 ]; then
+          echo "✅ **Status:** Linting completed successfully - no issues found" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Status:** Linting completed with issues (exit code: $LINT_EXIT_CODE)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Exit Code Meanings:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 0: No issues found" >> $GITHUB_STEP_SUMMARY
+          echo "- 2: Warnings detected" >> $GITHUB_STEP_SUMMARY
+          echo "- 4: Errors detected" >> $GITHUB_STEP_SUMMARY
+          echo "- 8: Invalid CLI arguments" >> $GITHUB_STEP_SUMMARY
+          echo "- 16: Fatal errors occurred" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "$LINT_OUTPUT" ]; then
+            echo "**Detailed Output:**" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$LINT_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+        
+        # Final status reporting with comprehensive exit code documentation
+        echo ""
+        echo "=== CloudFormation Linting Summary ==="
+        echo "Template: $TEMPLATE_NAME"
+        echo "Exit Code: $LINT_EXIT_CODE"
+        
+        # Map exit codes to descriptive messages
+        case $LINT_EXIT_CODE in
+          0)
+            echo "Status: ✅ SUCCESS - No issues found"
+            echo "Result: Template passed all CloudFormation linting checks"
+            ;;
+          2)
+            echo "Status: ⚠️  WARNINGS - Template has warnings"
+            echo "Result: Template has potential issues that should be reviewed"
+            ;;
+          4)
+            echo "Status: ❌ ERRORS - Template has errors"
+            echo "Result: Template has critical issues that must be fixed"
+            ;;
+          6)
+            echo "Status: ❌ ERRORS + WARNINGS - Template has both errors and warnings"
+            echo "Result: Template has critical issues and warnings that must be addressed"
+            ;;
+          8)
+            echo "Status: ❌ INVALID CLI - Invalid command line arguments"
+            echo "Result: cfn-lint was called with invalid parameters"
+            ;;
+          16)
+            echo "Status: ❌ FATAL - Fatal errors occurred"
+            echo "Result: cfn-lint encountered fatal errors during execution"
+            ;;
+          *)
+            echo "Status: ❌ UNKNOWN - Unexpected exit code"
+            echo "Result: cfn-lint returned an unexpected exit code: $LINT_EXIT_CODE"
+            ;;
+        esac
+        
+        # Display detailed output for non-success cases
+        if [ $LINT_EXIT_CODE -ne 0 ] && [ -n "$LINT_OUTPUT" ]; then
+          echo ""
+          echo "=== Detailed cfn-lint Output ==="
+          echo "$LINT_OUTPUT"
+        fi
+        
+        echo ""
+        echo "=== Exit Code Reference ==="
+        echo "0: No issues found"
+        echo "2: Warnings detected"
+        echo "4: Errors detected"
+        echo "8: Invalid CLI arguments"
+        echo "16: Fatal errors occurred"
+        echo ""
+        
+        # Final exit with preserved cfn-lint exit code for workflow decision making
+        if [ $LINT_EXIT_CODE -eq 0 ]; then
+          echo "✅ Action completed successfully - workflow can continue"
+        else
+          echo "❌ Action completed with issues - workflow should handle exit code $LINT_EXIT_CODE"
+        fi
+        
+        exit $LINT_EXIT_CODE
