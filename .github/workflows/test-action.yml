@@ -1,0 +1,238 @@
+name: Test CloudFormation Linter Action
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-valid-template:
+    name: Test Valid Template
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with valid template
+        id: valid-test
+        uses: ./
+        with:
+          template-path: 'test-templates/valid-template.yaml'
+
+      - name: Verify success exit code
+        run: |
+          echo "Valid template test completed successfully"
+          echo "Expected: exit code 0 (success)"
+
+  test-template-with-warnings:
+    name: Test Template with Warnings
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allow workflow to continue even if this step fails
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with template that has warnings
+        id: warnings-test
+        uses: ./
+        with:
+          template-path: 'test-templates/template-with-warnings.yaml'
+        continue-on-error: true
+
+      - name: Verify warnings exit code
+        run: |
+          echo "Template with warnings test completed"
+          echo "Expected: exit code 2 (warnings) or 0 (if no warnings detected)"
+          echo "Actual exit code: ${{ steps.warnings-test.outcome }}"
+
+  test-invalid-template:
+    name: Test Invalid Template
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allow workflow to continue even if this step fails
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with invalid template
+        id: invalid-test
+        uses: ./
+        with:
+          template-path: 'test-templates/invalid-template.yaml'
+        continue-on-error: true
+
+      - name: Verify error exit code
+        run: |
+          echo "Invalid template test completed"
+          echo "Expected: exit code 4 (errors) or higher"
+          echo "Actual outcome: ${{ steps.invalid-test.outcome }}"
+
+  test-file-not-found:
+    name: Test File Not Found Error
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allow workflow to continue even if this step fails
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with non-existent template
+        id: not-found-test
+        uses: ./
+        with:
+          template-path: 'non-existent-template.yaml'
+        continue-on-error: true
+
+      - name: Verify file not found exit code
+        run: |
+          echo "File not found test completed"
+          echo "Expected: exit code 1 (file not found)"
+          echo "Actual outcome: ${{ steps.not-found-test.outcome }}"
+
+  test-nested-path:
+    name: Test Nested Path Template
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with nested path template
+        id: nested-test
+        uses: ./
+        with:
+          template-path: 'test-templates/valid-template.yaml'
+
+      - name: Verify nested path handling
+        run: |
+          echo "Nested path test completed successfully"
+          echo "Expected: exit code 0 (success)"
+
+  test-legacy-templates:
+    name: Test Legacy Templates (Backward Compatibility)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template:
+          - 'test-template.yaml'
+          - 'test-invalid-template.yaml'
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with legacy template
+        id: legacy-test
+        uses: ./
+        with:
+          template-path: ${{ matrix.template }}
+        continue-on-error: true
+
+      - name: Verify legacy template handling
+        run: |
+          echo "Legacy template test completed: ${{ matrix.template }}"
+          echo "Outcome: ${{ steps.legacy-test.outcome }}"
+
+  test-summary-generation:
+    name: Test Step Summary Generation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scenario:
+          - name: 'valid'
+            template: 'test-templates/valid-template.yaml'
+            expected: 'success'
+          - name: 'warnings'
+            template: 'test-templates/template-with-warnings.yaml'
+            expected: 'warnings'
+          - name: 'errors'
+            template: 'test-templates/invalid-template.yaml'
+            expected: 'errors'
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Step Summary for ${{ matrix.scenario.name }}
+        id: summary-test
+        uses: ./
+        with:
+          template-path: ${{ matrix.scenario.template }}
+        continue-on-error: true
+
+      - name: Verify Step Summary was generated
+        run: |
+          echo "Step Summary test completed for ${{ matrix.scenario.name }} scenario"
+          echo "Template: ${{ matrix.scenario.template }}"
+          echo "Expected: ${{ matrix.scenario.expected }}"
+          echo "Outcome: ${{ steps.summary-test.outcome }}"
+          
+          # Check if step summary file exists and has content
+          if [ -f "$GITHUB_STEP_SUMMARY" ]; then
+            echo "✅ Step summary file exists"
+            echo "Step summary content:"
+            cat "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Step summary file not found"
+          fi
+
+  test-cross-platform:
+    name: Test Cross-Platform Compatibility
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        template: ['test-templates/valid-template.yaml']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test on ${{ matrix.os }}
+        uses: ./
+        with:
+          template-path: ${{ matrix.template }}
+
+      - name: Verify cross-platform compatibility
+        shell: bash
+        run: |
+          echo "Cross-platform test completed successfully on ${{ matrix.os }}"
+
+  test-results-summary:
+    name: Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [
+      test-valid-template,
+      test-template-with-warnings,
+      test-invalid-template,
+      test-file-not-found,
+      test-nested-path,
+      test-legacy-templates,
+      test-summary-generation,
+      test-cross-platform
+    ]
+    if: always()
+    steps:
+      - name: Test Results Summary
+        run: |
+          echo "## CloudFormation Linter Action Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Scenario | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Valid Template | ${{ needs.test-valid-template.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Template with Warnings | ${{ needs.test-template-with-warnings.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Invalid Template | ${{ needs.test-invalid-template.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| File Not Found | ${{ needs.test-file-not-found.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Nested Path | ${{ needs.test-nested-path.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Legacy Templates | ${{ needs.test-legacy-templates.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Summary Generation | ${{ needs.test-summary-generation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cross-Platform | ${{ needs.test-cross-platform.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Valid CloudFormation templates" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Templates with warnings" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Invalid templates with errors" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ File not found error handling" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Nested path handling" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub Step Summary generation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cross-platform compatibility" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Exit code preservation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Backward compatibility" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template with warnings for testing'
+
+Resources:
+  # This will generate warnings due to hardcoded values and missing best practices
+  TestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: 'hardcoded-bucket-name-2024'  # Warning: hardcoded name
+      # Missing PublicAccessBlockConfiguration - will generate warning
+
+  # This will generate warnings about missing properties
+  TestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      # Missing Path property - may generate info/warning
+
+  # Lambda function with potential warnings
+  TestFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'test-function'  # Hardcoded name - warning
+      Runtime: python3.8  # Older runtime - may generate warning
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return {'statusCode': 200}
+      Role: !GetAtt TestRole.Arn
+      # Missing timeout, memory settings - may generate warnings

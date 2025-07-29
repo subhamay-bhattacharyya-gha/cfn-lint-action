@@ -1,0 +1,10 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Invalid CloudFormation template for testing'
+
+Resources:
+  InvalidBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "invalid-bucket-name-with-uppercase-INVALID"
+      # This will cause cfn-lint errors due to invalid bucket naming
+      AccessControl: InvalidValue  # This property doesn't exist
