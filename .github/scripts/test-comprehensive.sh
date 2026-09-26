@@ -136,19 +136,19 @@ run_test() {
 
 # Test Scenario 1: Valid Template
 run_test "Valid Template" \
-         "test-templates/valid-template.yaml" \
+         ".github/scripts/templates/valid-template.yaml" \
          0 \
          "Test with a properly formatted CloudFormation template that should pass all linting checks"
 
 # Test Scenario 2: Template with Warnings
 run_test "Template with Warnings" \
-         "test-templates/template-with-warnings.yaml" \
+         ".github/scripts/templates/template-with-warnings.yaml" \
          "any" \
          "Test with a template that may generate warnings (exit code 2) or pass (exit code 0)"
 
 # Test Scenario 3: Invalid Template
 run_test "Invalid Template" \
-         "test-templates/invalid-template.yaml" \
+         ".github/scripts/templates/invalid-template.yaml" \
          4 \
          "Test with a template containing errors that should fail linting (exit code 4 or higher)"
 
@@ -160,19 +160,19 @@ run_test "File Not Found" \
 
 # Test Scenario 5: Legacy Valid Template
 run_test "Legacy Valid Template" \
-         "test-template.yaml" \
+         ".github/scripts/templates/test-template.yaml" \
          0 \
          "Test backward compatibility with existing valid template"
 
 # Test Scenario 6: Legacy Invalid Template
 run_test "Legacy Invalid Template" \
-         "test-invalid-template.yaml" \
+         ".github/scripts/templates/test-invalid-template.yaml" \
          "any" \
          "Test backward compatibility with existing invalid template"
 
 # Test Scenario 7: Nested Path Template
 run_test "Nested Path Template" \
-         "test-templates/valid-template.yaml" \
+         ".github/scripts/templates/valid-template.yaml" \
          0 \
          "Test handling of templates in subdirectories"
 

@@ -10,7 +10,7 @@ echo "Test 1: Valid template (expecting exit code 0)"
 echo "-----------------------------------------------"
 
 # Simulate the action's exit code handling logic
-TEMPLATE_PATH="test-template.yaml"
+TEMPLATE_PATH=".github/scripts/templates/test-template.yaml"
 TEMPLATE_NAME=$(basename "$TEMPLATE_PATH")
 FULL_TEMPLATE_PATH="$(pwd)/$TEMPLATE_PATH"
 
@@ -93,7 +93,7 @@ echo ""
 echo "Test 2: Invalid template (expecting non-zero exit code)"
 echo "-------------------------------------------------------"
 
-TEMPLATE_PATH="test-invalid-template.yaml"
+TEMPLATE_PATH=".github/scripts/templates/test-invalid-template.yaml"
 TEMPLATE_NAME=$(basename "$TEMPLATE_PATH")
 FULL_TEMPLATE_PATH="$(pwd)/$TEMPLATE_PATH"
 

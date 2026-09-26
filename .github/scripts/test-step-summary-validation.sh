@@ -201,19 +201,19 @@ PASSED_TESTS=0
 
 # Test 1: Valid template (success summary)
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if run_summary_test "valid-template" "test-templates/valid-template.yaml" "success"; then
+if run_summary_test "valid-template" ".github/scripts/templates/valid-template.yaml" "success"; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
 fi
 
 # Test 2: Template with warnings
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if run_summary_test "template-warnings" "test-templates/template-with-warnings.yaml" "warnings"; then
+if run_summary_test "template-warnings" ".github/scripts/templates/template-with-warnings.yaml" "warnings"; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
 fi
 
 # Test 3: Invalid template (error summary)
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if run_summary_test "invalid-template" "test-templates/invalid-template.yaml" "errors"; then
+if run_summary_test "invalid-template" ".github/scripts/templates/invalid-template.yaml" "errors"; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
 fi
 
@@ -225,7 +225,7 @@ fi
 
 # Test 5: Legacy template (backward compatibility)
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if run_summary_test "legacy-template" "test-template.yaml" "success"; then
+if run_summary_test "legacy-template" ".github/scripts/templates/test-template.yaml" "success"; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
 fi
 
