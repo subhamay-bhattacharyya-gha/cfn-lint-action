@@ -1,7 +1,7 @@
 {
   "name": "cfn-lint-action",
   "version": "0.0.0",
-  "description": "A sample project using semantic release with custom plugins.",
+  "description": "A GitHub Action that validates CloudFormation templates using cfn-lint",
   "main": "index.js",
   "scripts": {
     "release": "semantic-release"

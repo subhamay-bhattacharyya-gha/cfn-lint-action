@@ -11,7 +11,7 @@ export GITHUB_STEP_SUMMARY="/tmp/test-step-summary.md"
 > $GITHUB_STEP_SUMMARY
 
 # Test with template (can be changed via argument)
-TEMPLATE_PATH="${1:-test-template.yaml}"
+TEMPLATE_PATH="${1:-.github/scripts/templates/test-template.yaml}"
 TEMPLATE_NAME=$(basename "$TEMPLATE_PATH")
 FULL_TEMPLATE_PATH="$GITHUB_WORKSPACE/$TEMPLATE_PATH"
 
